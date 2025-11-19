@@ -7,7 +7,7 @@ BOT_TOKEN = os.getenv('BOT_TOKEN')
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [["1", "2"], ["3", "4"]]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text("Привет! Выберите вариант:", reply_markup=reply_markup)
+    await update.message.reply_text("🎉 Добро пожаловать! Я простой бот с кнопками. Выберите один из вариантов ниже:", reply_markup=reply_markup)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
