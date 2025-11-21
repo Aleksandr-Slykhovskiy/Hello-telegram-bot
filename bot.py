@@ -1,8 +1,12 @@
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import os
+from database import ClickCounterDB
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
+
+# Инициализируем базу данных
+db = ClickCounterDB()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [["1", "2"], ["3", "4"], ["5"]]
@@ -12,13 +16,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text in ["1", "2", "3", "4", "5"]:
-        await update.message.reply_text(f"Вы выбрали вариант {text}")
+        # Увеличиваем счётчик в БД
+        new_count = db.increment_count()
+        await update.message.reply_text(f"Вы выбрали вариант {text}\nВсего кликов: {new_count}")
     else:
         await update.message.reply_text("Пожалуйста, используйте кнопки для выбора")
+
+# Обработчик команды /stats
+async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Получаем текущее значение из БД
+    total_clicks = db.get_count()
+    await update.message.reply_text(f"📊 Статистика нажатий:\nВсего кликов: {total_clicks}")
 
 def main():
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("stats", show_stats))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     print("Бот запущен...")
     application.run_polling()
