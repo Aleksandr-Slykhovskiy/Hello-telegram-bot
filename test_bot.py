@@ -1,52 +1,94 @@
 #!/usr/bin/env python3
 """
-Тесты для Telegram бота
+Тесты для Telegram бота с базой данных
 """
 
 import sys
 import os
+import pytest
+import tempfile
 
-# Добавляем текущую директорию в путь чтобы импортировать bot
+# Добавляем текущую директорию в путь чтобы импортировать модули
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from bot import click_counters
+from database import ClickCounterDB
 
 
-def test_click_counters_initialized():
-    """Тест: счетчики инициализированы нулями"""
-    expected = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}
-    assert click_counters == expected, f"Ожидалось {expected}, получено {click_counters}"
+class TestClickCounterDB:
+    """Тесты для базы данных счетчика кликов"""
+
+    def setup_method(self):
+        """Создаем временную базу для тестов"""
+        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
+        self.db_path = self.temp_db.name
+        self.db = ClickCounterDB(db_path=self.db_path)
+
+    def teardown_method(self):
+        """Удаляем временную базу после тестов"""
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
+
+    def test_db_initialization(self):
+        """Тест: база данных инициализируется с нулевым значением"""
+        count = self.db.get_count()
+        assert count == 0, f"Ожидалось 0, получено {count}"
+
+    def test_increment_count(self):
+        """Тест: счетчик увеличивается корректно"""
+        # Первое увеличение
+        count1 = self.db.increment_count()
+        assert count1 == 1, f"Ожидалось 1, получено {count1}"
+
+        # Второе увеличение
+        count2 = self.db.increment_count()
+        assert count2 == 2, f"Ожидалось 2, получено {count2}"
+
+    def test_get_count(self):
+        """Тест: получение значения счетчика"""
+        # До увеличения
+        initial_count = self.db.get_count()
+        assert initial_count == 0
+
+        # После увеличения
+        self.db.increment_count()
+        new_count = self.db.get_count()
+        assert new_count == 1
 
 
-def test_click_counter_structure():
-    """Тест: структура счетчиков корректна"""
-    assert isinstance(click_counters, dict), "click_counters должен быть словарем"
-    assert len(click_counters) == 5, "Должно быть 5 счетчиков для кнопок 1-5"
+def test_database_file_created():
+    """Тест: файл базы данных создается"""
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as temp_db:
+        db_path = temp_db.name
 
-    for key in ["1", "2", "3", "4", "5"]:
-        assert key in click_counters, f"Ключ {key} отсутствует в счетчиках"
-        assert isinstance(click_counters[key], int), f"Счетчик для {key} должен быть числом"
+    try:
+        # Создаем базу
+        db = ClickCounterDB(db_path=db_path)
 
+        # Проверяем что файл создан
+        assert os.path.exists(db_path), "Файл базы данных не создан"
 
-def test_click_counters_can_increment():
-    """Тест: счетчики можно увеличивать"""
-    # Сохраняем исходные значения
-    original_values = click_counters.copy()
+        # Проверяем что счетчик работает
+        count = db.get_count()
+        assert count == 0
 
-    # Увеличиваем счетчики
-    click_counters["1"] += 1
-    click_counters["3"] += 5
-
-    # Проверяем что значения изменились
-    assert click_counters["1"] == original_values["1"] + 1
-    assert click_counters["3"] == original_values["3"] + 5
-
-    # Возвращаем исходные значения
-    click_counters.update(original_values)
+    finally:
+        # Удаляем временный файл
+        if os.path.exists(db_path):
+            os.remove(db_path)
 
 
 if __name__ == "__main__":
-    test_click_counters_initialized()
-    test_click_counter_structure()
-    test_click_counters_can_increment()
+    # Запускаем тесты вручную
+    test_db = TestClickCounterDB()
+
+    test_db.setup_method()
+    try:
+        test_db.test_db_initialization()
+        test_db.test_increment_count()
+        test_db.test_get_count()
+        print("✅ Все тесты базы данных прошли успешно!")
+    finally:
+        test_db.teardown_method()
+
+    test_database_file_created()
     print("✅ Все тесты прошли успешно!")
