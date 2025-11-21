@@ -4,6 +4,9 @@ import os
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
+# Словарь для хранения счетчиков нажатий
+click_counters = {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [["1", "2"], ["3", "4"], ["5"]]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -12,13 +15,23 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text in ["1", "2", "3", "4", "5"]:
+        click_counters[text] += 1
         await update.message.reply_text(f"Вы выбрали вариант {text}")
     else:
         await update.message.reply_text("Пожалуйста, используйте кнопки для выбора")
 
+#Обработчик команды /stats
+async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    stats_text = "📊 Статистика нажатий:\n"
+    for button, count in click_counters.items():
+        stats_text += f"Кнопка {button}: {count} раз\n"
+
+    await update.message.reply_text(stats_text)
+
 def main():
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("stats", show_stats))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     print("Бот запущен...")
     application.run_polling()
